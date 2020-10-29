@@ -1,0 +1,6 @@
+*.pyc
+*.swp
+.DS_store
+__pycache__
+
+.mypy_cache
