@@ -36,10 +36,10 @@ def func4(syn: Trace, obs: Trace):
 
 
 def func5(acc):
-    from pypers.utils import AuxiliaryData
+    from pypers.utils import ASDFAuxiliary
 
-    # save as auxiliary data by returning namedtuple `AuxiliaryData`
-    return AuxiliaryData(acc.data, acc.auxiliary.parameters)
+    # save as auxiliary data by returning namedtuple `ASDFAuxiliary`
+    return ASDFAuxiliary(acc.data, acc.auxiliary.parameters)
 
 
 def func6(aux):

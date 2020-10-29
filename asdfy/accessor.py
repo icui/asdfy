@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 # input argument for auxiliary data
-AuxiliaryData = namedtuple('AuxiliaryData', ['data', 'parameters'])
+ASDFAuxiliary = namedtuple('ASDFAuxiliary', ['data', 'parameters'])
 
 
 @dataclass
@@ -60,7 +60,7 @@ class ASDFAccessor:
         """Auxiliary data group."""
         if self.key[0] == 'auxiliary':
             group = self.ds.auxiliary_data[self.key[1]][self.key[2]]
-            return AuxiliaryData(np.array(group.data), dict(group.parameters))
+            return ASDFAuxiliary(np.array(group.data), dict(group.parameters))
         
         return None
     

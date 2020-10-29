@@ -25,7 +25,7 @@ ASDFProcessor('input.h5', 'output.h5', process_func).run()
 ```
 
 ##### Defailed explination
-TBD. Check out ```tests/main.py``` reference for now. To run tests:
+TBD. Refer to ```tests/main.py``` for now. To run tests:
 ```
 cd tests
 mpi4un -n 4 python main.py
@@ -36,37 +36,37 @@ mpi4un -n 4 python main.py
 ```
 Union[str, Iterable[str]]
 ```
-path to input ASDFDataSet(s)
+Path to input ASDFDataSet(s)
 
 ##### dst
 ```
 str
 ```
-path to output ASDFDataSet
+Path to output ASDFDataSet
 
-##### unc
+##### func
 ```
 Callable[..., ASDFOutput]
 ```
-processing function
+Processing function, each argument correspond to an input dataset.
 
 ##### input_type
 ```
 Literal['stream', 'trace', 'auxiliary'] = 'trace'
 ```
-type of input data
+Type of input data
 
 ##### input_tag
 ```
 Optional[str] = None
 ```
-input waveform tag or auxiliary group, None for using the first available
+Input waveform tag or auxiliary group, None for using the first available
 
 ##### output_tag
 ```
 Optional[str] = None
 ```
-output waveform tag or auxiliary group, None for using input_tag or input_type
+Output waveform tag or auxiliary group, None for using input_tag or input_type
 
 ##### pairwise
 ```
@@ -78,10 +78,10 @@ process input data pairwise
 ```
 bool = False
 ```
-pass the origional accessor to the processing function
+Pass the origional accessor to the processing function. Set to .True. if you need event or station info.
 
 ##### onerror
 ```
 Optional[Callable[[Exception], None]] = None
 ```
-callback when error occurs
+Callback when error occurs

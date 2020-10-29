@@ -1,4 +1,4 @@
-from .accessor import ASDFAccessor, AuxiliaryData
-from .processor import ASDFProcessor
+from .accessor import ASDFAccessor, ASDFAuxiliary
+from .processor import ASDFProcessor, ASDFOutput
 
-__all__ = ['ASDFAccessor', 'AuxiliaryData', 'ASDFProcessor']
+__all__ = ['ASDFAccessor', 'ASDFAuxiliary', 'ASDFProcessor', 'ASDFOutput']

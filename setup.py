@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="asdfy",
-    version="0.0.1",
+    version="0.0.2",
     author="Congyue Cui",
     author_email="ccui@princeton.edu",
     description="A robust and flexible parallel processing library for pyasdf",

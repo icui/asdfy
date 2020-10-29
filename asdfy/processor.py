@@ -10,7 +10,7 @@ from typing import Callable, List, Dict, Tuple, Union, Iterable, Literal, Option
 import numpy as np
 from obspy import Stream, Trace
 
-from .accessor import ASDFAccessor, AuxiliaryData
+from .accessor import ASDFAccessor, ASDFAuxiliary
 
 if TYPE_CHECKING:
     from pypers import Space
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 # type of output data
-ASDFOutput = Optional[Union[Stream, Trace, AuxiliaryData, Tuple[np.array, dict]]]
+ASDFOutput = Optional[Union[Stream, Trace, ASDFAuxiliary, Tuple[np.array, dict]]]
 
 
 @dataclass
@@ -171,7 +171,7 @@ class ASDFProcessor:
                     output[key] = self.func(*accessors)
 
                     if isinstance(output[key], tuple):
-                        output[key] = AuxiliaryData(*output[key]) # type: ignore
+                        output[key] = ASDFAuxiliary(*output[key]) # type: ignore
                 
                 except Exception as e:
                     self._raise(e)
@@ -198,7 +198,7 @@ class ASDFProcessor:
                         # write waveform data
                         ds.add_waveforms(data, output_tag)
                     
-                    elif isinstance(data, AuxiliaryData):
+                    elif isinstance(data, ASDFAuxiliary):
                         # write auxiliary data
                         ds.add_auxiliary_data(
                             data = data.data,
