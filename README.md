@@ -2,7 +2,7 @@
 
 ----
 
-**Library to process ASDFDataSet(s) from [pyasdf](https://github.com/seismicdata/pyasdf/).**
+**A library to process ASDFDataSet(s) from [pyasdf](https://github.com/seismicdata/pyasdf/).**
 
 ----
 
