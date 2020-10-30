@@ -1,4 +1,5 @@
 # Asdfy
+A parallel processing library for [pyasdf](https://github.com/seismicdata/pyasdf/)
 
 ----
 
