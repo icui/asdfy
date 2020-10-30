@@ -1,9 +1,8 @@
 # Asdfy
-A parallel processing library for [pyasdf](https://github.com/seismicdata/pyasdf/)
 
 ----
 
-**Library to process ASDFDataSet(s) from pyasdf.**
+**Library to process ASDFDataSet(s) from [pyasdf](https://github.com/seismicdata/pyasdf/).**
 
 ----
 
