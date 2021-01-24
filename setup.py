@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="asdfy",
-    version="0.0.2",
+    version="0.0.3",
     author="Congyue Cui",
     author_email="ccui@princeton.edu",
-    description="A robust and flexible parallel processing library for pyasdf",
+    description="A parallel processing library for pyasdf",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/icui/asdfy",

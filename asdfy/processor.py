@@ -6,6 +6,7 @@ from os.path import dirname, exists
 from subprocess import check_call
 from dataclasses import dataclass, field, fields
 from typing import Callable, List, Dict, Tuple, Union, Iterable, Literal, Optional, TYPE_CHECKING
+from time import sleep
 
 import numpy as np
 from obspy import Stream, Trace
@@ -69,7 +70,8 @@ class ASDFProcessor:
         if self.onerror:
             self.onerror(e)
         
-        print(format_exc(), file=stderr)
+        else:
+            print(format_exc(), file=stderr)
 
     def _open(self):
         """Open input dataset(s)."""
@@ -212,9 +214,22 @@ class ASDFProcessor:
         if not exists(lock_file):
             with open(lock_file, 'a') as f:
                 f.write(str(self._rank) + ' ')
+
+        source = None
         
-        with open(lock_file, 'r') as f:
-            source = int(f.read().split(' ')[0])
+        for _ in range(3):
+            with open(lock_file, 'r') as f:
+                try:
+                    source = int(f.read().split(' ')[0])
+                
+                except Exception as e:
+                    sleep(0.1)
+                
+                else:
+                    break
+        
+        if source is None:
+            raise IOError('unable to read lock file')
         
         if source == self._rank:
             write()
