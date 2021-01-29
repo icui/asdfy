@@ -14,7 +14,6 @@ from obspy import Stream, Trace
 from .accessor import ASDFAccessor, ASDFAuxiliary
 
 if TYPE_CHECKING:
-    from pypers import Space
     from pyasdf import ASDFDataSet
 
 
