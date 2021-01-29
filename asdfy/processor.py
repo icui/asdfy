@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 # type of output data
-ASDFOutput = Optional[Union[Stream, Trace, ASDFAuxiliary, Tuple[np.array, dict]]]
+ASDFOutput = Optional[Union[Stream, Trace, ASDFAuxiliary, Tuple[np.ndarray, dict]]]
 
 
 @dataclass

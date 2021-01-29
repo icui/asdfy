@@ -36,7 +36,7 @@ def func4(syn: Trace, obs: Trace):
 
 
 def func5(acc):
-    from pypers.utils import ASDFAuxiliary
+    from asdfy import ASDFAuxiliary
 
     # save as auxiliary data by returning namedtuple `ASDFAuxiliary`
     return ASDFAuxiliary(acc.data, acc.auxiliary.parameters)
@@ -80,7 +80,9 @@ def verify():
 
 
 def verify_mpi():
-    from pypers.entrance.mpiexec import rank
+    from mpi4py.MPI import COMM_WORLD as comm
+
+    rank = comm.Get_rank()
 
     if rank == 0:
         verify()
