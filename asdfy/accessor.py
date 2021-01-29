@@ -78,7 +78,7 @@ class ASDFAccessor:
 
     @property
     def stream(self):
-        """Stream data (None if path[0] == auxiliary)."""
+        """Obspy Stream object."""
         if self.key[0] != 'auxiliary':
             return self.waveform[self.key[1]]
         
@@ -86,9 +86,23 @@ class ASDFAccessor:
 
     @property
     def trace(self):
-        """Trace data (None if path[0] == auxiliary)."""
+        """Obspy Trace object."""
         if self.key[0] == 'trace':
-            return self.stream.select(component=self.key[2].split('_')[-1][-1])[0]
+            return self.stream.select(component=self.component)[0]
+        
+        return None
+    
+    @property
+    def station(self):
+        """Station name."""
+        if self.key[0] != 'auxiliary':
+            return '.'.join(self.key[2].split('_')[:2])
+    
+    @property
+    def component(self):
+        """Trace component."""
+        if self.key[0] == 'trace':
+            return self.key[2].split('_')[-1][-1]
         
         return None
 
