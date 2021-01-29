@@ -39,7 +39,7 @@ def func5(acc):
     from asdfy import ASDFAuxiliary
 
     # save as auxiliary data by returning namedtuple `ASDFAuxiliary`
-    return ASDFAuxiliary(acc.data, acc.auxiliary.parameters)
+    return {'test2': ASDFAuxiliary(acc.data, acc.auxiliary.parameters)}
 
 
 def func6(aux):
@@ -130,7 +130,7 @@ def test():
     if rank == 0:
         print('test6: auxiliary -> stream')
     
-    ASDFProcessor('proc5.h5', 'proc6.h5', func6, input_type='auxiliary', input_tag='test').run()
+    ASDFProcessor('proc5.h5', 'proc6.h5', func6, input_type='auxiliary', input_tag='test2').run()
 
     if rank == 0:
         verify()

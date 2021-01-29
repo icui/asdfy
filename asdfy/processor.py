@@ -158,6 +158,9 @@ class ASDFProcessor:
         """Process data in current rank."""
         output = {}
 
+        # default output tag
+        output_tag = self.output_tag or self.input_tag or self.input_type
+
         for i, key in enumerate(keys):
             if i % self._size == self._rank:
                 accessors = []
@@ -169,10 +172,16 @@ class ASDFProcessor:
                 
                 # process data
                 try:
-                    output[key] = self.func(*accessors)
+                    result = self.func(*accessors)
 
-                    if isinstance(output[key], tuple):
-                        output[key] = ASDFAuxiliary(*output[key]) # type: ignore
+                    if not isinstance(result, dict):
+                        result = {output_tag: result}
+                    
+                    for key, val in result.items():
+                        if isinstance(val, tuple):
+                            result[key] = ASDFAuxiliary(*val)
+
+                    output[key] = result
                 
                 except Exception as e:
                     self._raise(e)
@@ -188,24 +197,23 @@ class ASDFProcessor:
         from mpi4py.MPI import COMM_WORLD as comm
         from pyasdf import ASDFDataSet
 
-        output_tag = self.output_tag or self.input_tag or self.input_type
-
         # write to output dataset
         def write():
             with ASDFDataSet(self.dst, mode='a', mpi=False, compression=None) as ds:
                 """Write to output dataset."""
-                for key, data in output.items():
-                    if isinstance(data, Stream) or isinstance(data, Trace):
-                        # write waveform data
-                        ds.add_waveforms(data, output_tag)
-                    
-                    elif isinstance(data, ASDFAuxiliary):
-                        # write auxiliary data
-                        ds.add_auxiliary_data(
-                            data = data.data,
-                            data_type = output_tag,
-                            path = key,
-                            parameters = data.parameters)
+                for key, val in output.items():
+                    for output_tag, data in val.items():
+                        if isinstance(data, Stream) or isinstance(data, Trace):
+                            # write waveform data
+                            ds.add_waveforms(data, output_tag)
+                        
+                        elif isinstance(data, ASDFAuxiliary):
+                            # write auxiliary data
+                            ds.add_auxiliary_data(
+                                data = data.data,
+                                data_type = output_tag,
+                                path = key,
+                                parameters = data.parameters)
             
         # determine the process that manages write operations
         lock_file = self.dst + '.lock'
