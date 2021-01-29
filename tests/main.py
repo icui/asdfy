@@ -46,7 +46,7 @@ def func6(aux):
     from obspy import Trace
 
     # save waveform by returning a Trace
-    return Trace(aux.data, header=aux.parameters)
+    return {'test': Trace(aux.data, header=aux.parameters)}
 
 def reset():
     from subprocess import check_call

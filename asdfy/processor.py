@@ -177,9 +177,9 @@ class ASDFProcessor:
                     if not isinstance(result, dict):
                         result = {output_tag: result}
                     
-                    for key, val in result.items():
+                    for key2, val in result.items():
                         if isinstance(val, tuple):
-                            result[key] = ASDFAuxiliary(*val)
+                            result[key2] = ASDFAuxiliary(*val)
 
                     output[key] = result
                 
