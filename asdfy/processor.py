@@ -251,4 +251,4 @@ class ASDFProcessor:
             for j, ds in enumerate(input_ds):
                 accessors[key].append(ASDFAccessor(ds, (self.input_type, keys[key][j], key)))
         
-        return accessors
+        return accessors, input_ds
