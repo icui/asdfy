@@ -102,10 +102,13 @@ def test():
         reset()
 
     # process stream data
+    ap = ASDFProcessor('traces.h5', 'proc1.h5', func1, input_type='stream', input_tag='synthetic')
+
     if rank == 0:
         print('test1: stream -> stream')
+        assert len(ap.access()) == 9
     
-    ASDFProcessor('traces.h5', 'proc1.h5', func1, input_type='stream', input_tag='synthetic').run()
+    ap.run()
 
     # process stream data with more info passed
     if rank == 0:

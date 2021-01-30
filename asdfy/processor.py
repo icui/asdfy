@@ -7,18 +7,18 @@ from subprocess import check_call
 from dataclasses import dataclass
 from typing import Callable, List, Dict, Tuple, Union, Iterable, Literal, Optional, TYPE_CHECKING
 
-import numpy as np
-from obspy import Stream, Trace
 
 from .accessor import ASDFAccessor, ASDFAuxiliary
 from .writer import ASDFWriter
 
 if TYPE_CHECKING:
+    import numpy as np
     from pyasdf import ASDFDataSet
+    from obspy import Stream, Trace
 
 
 # type of output data
-ASDFOutput = Optional[Union[Stream, Trace, ASDFAuxiliary, Tuple[np.ndarray, dict]]]
+ASDFOutput = Optional[Union['Stream', 'Trace', ASDFAuxiliary, Tuple['np.ndarray', dict]]]
 
 
 @dataclass
@@ -227,3 +227,17 @@ class ASDFProcessor:
         
         except Exception as e:
             self._raise(e)
+    
+    def access(self):
+        """Get all accessors."""
+        input_ds = self._open()
+        keys = self._get_keys(input_ds)
+        accessors = {}
+
+        for key in keys:
+            accessors[key] = []
+
+            for j, ds in enumerate(input_ds):
+                accessors[key].append(ASDFAccessor(ds, (self.input_type, keys[key][j], key)))
+        
+        return accessors

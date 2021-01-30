@@ -4,8 +4,6 @@ from collections import namedtuple
 from dataclasses import dataclass
 from typing import Literal, Tuple, TYPE_CHECKING
 
-import numpy as np
-
 if TYPE_CHECKING:
     from pyasdf import ASDFDataSet
 
@@ -58,6 +56,8 @@ class ASDFAccessor:
     @property
     def auxiliary(self):
         """Auxiliary data group."""
+        import numpy as np
+        
         if self.key[0] == 'auxiliary':
             group = self.ds.auxiliary_data[self.key[1]][self.key[2]]
             return ASDFAuxiliary(np.array(group.data), dict(group.parameters))
