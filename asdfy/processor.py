@@ -28,10 +28,10 @@ class ASDFProcessor:
     src: Union[str, Iterable[str]]
 
     # path to output ASDFDataSet
-    dst: str
+    dst: Optional[str] = None
 
     # processing function
-    func: Callable[..., ASDFOutput]
+    func: Optional[Callable[..., ASDFOutput]] = None
 
     # type of input data
     input_type: Literal['stream', 'trace', 'auxiliary'] = 'trace'
@@ -80,6 +80,9 @@ class ASDFProcessor:
     def _copy_meta(self, input_ds: List[ASDFDataSet]):
         """Copy event / station info to output dataset."""
         from pyasdf import ASDFDataSet
+        
+        if self.dst is None:
+            return
 
         # make sure output directory is ready
         if cwd := dirname(self.dst):
@@ -152,9 +155,12 @@ class ASDFProcessor:
         
         return keys
     
-    def _process(self, input_ds: List[ASDFDataSet], keys: Dict[str, List[str]], writer: ASDFWriter):
+    def _process(self, input_ds: List[ASDFDataSet], keys: Dict[str, List[str]], writer: Optional[ASDFWriter] = None):
         """Process data in current rank."""
         from mpi4py.MPI import COMM_WORLD as comm
+        
+        if self.func is None:
+            return
 
         myrank = comm.Get_rank()
         nranks = comm.Get_size()
@@ -182,7 +188,8 @@ class ASDFProcessor:
                         if isinstance(val, tuple):
                             val = ASDFAuxiliary(*val)
                         
-                        writer.add(val, tag, key)
+                        if writer:
+                            writer.add(val, tag, key)
                 
                 except Exception as e:
                     self._raise(e)
@@ -222,8 +229,12 @@ class ASDFProcessor:
 
         # process and save output
         try:
-            self._process(input_ds, keys, writer := ASDFWriter(self.dst))
-            writer.write()
+            if self.dst:
+                self._process(input_ds, keys, writer := ASDFWriter(self.dst))
+                writer.write()
+            
+            else:
+                self._process(input_ds, keys)
         
         except Exception as e:
             self._raise(e)
