@@ -1,10 +1,15 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+from os import chdir, path
 
 from asdfy import ASDFProcessor, ASDFAccessor
 
 if TYPE_CHECKING:
     from obspy import Trace, Stream
+
+
+if not path.exists('traces.h5') and path.exists('tests/traces.h5'):
+    chdir('tests')
 
 
 def func1(stream: Stream):
@@ -100,7 +105,7 @@ def test():
     if rank == 0:
         print('test1: stream -> stream')
     
-    ASDFProcessor('traces.h5', 'proc1.h5', func1, input_type='stream').run()
+    ASDFProcessor('traces.h5', 'proc1.h5', func1, input_type='stream', input_tag='synthetic').run()
 
     # process stream data with more info passed
     if rank == 0:

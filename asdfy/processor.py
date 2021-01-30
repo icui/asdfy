@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from traceback import format_exc
 from sys import stderr
-from os.path import dirname, exists
+from os.path import dirname
 from subprocess import check_call
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass
 from typing import Callable, List, Dict, Tuple, Union, Iterable, Literal, Optional, TYPE_CHECKING
-from time import sleep
 
 import numpy as np
 from obspy import Stream, Trace
 
 from .accessor import ASDFAccessor, ASDFAuxiliary
+from .writer import ASDFWriter
 
 if TYPE_CHECKING:
     from pyasdf import ASDFDataSet
@@ -51,19 +51,13 @@ class ASDFProcessor:
     # callback when error occurs
     onerror: Optional[Callable[[Exception], None]] = None
 
-    # current MPI rank
-    _rank: int = field(init=False)
-
-    # MPI rank size
-    _size: int = field(init=False)
-
     def _check(self):
         """Make sure properties are correct."""
         if self.pairwise and not isinstance(self.src, str) and len(list(self.src)) > 1:
-            raise ValueError('Pairwise processing is only available for single dataset')
+            raise ValueError('pairwise processing is only available for single dataset')
         
         if self.input_type not in ('stream', 'trace', 'auxiliary'):
-            raise ValueError('Unsupported input type', self.input_type)
+            raise ValueError('unsupported input type', self.input_type)
     
     def _raise(self, e: Exception):
         if self.onerror:
@@ -83,8 +77,8 @@ class ASDFProcessor:
     
         return input_ds
     
-    def _read(self, input_ds: List[ASDFDataSet]):
-        """Copy event / station info to output dataset and get data keys to be processed."""
+    def _copy_meta(self, input_ds: List[ASDFDataSet]):
+        """Copy event / station info to output dataset."""
         from pyasdf import ASDFDataSet
 
         # make sure output directory is ready
@@ -114,7 +108,8 @@ class ASDFProcessor:
         
         del output_ds
 
-        # get data keys
+    def _get_keys(self, input_ds: List[ASDFDataSet]):
+        """Get paths to the data to be processed."""
         keys = {}
 
         def add(k, t):
@@ -126,16 +121,19 @@ class ASDFProcessor:
 
         for ds in input_ds:
             if self.input_type == 'auxiliary':
+                # add auxiliary data
                 tag = self.input_tag or ds.auxiliary_data.list()[0]
                 
                 for key in ds.auxiliary_data[tag].list():
                     add(key, tag)
 
             else:
+                # add waveform data
                 for key in (key.replace('.', '_') for key in ds.waveforms.list()):
                     tags = ds.waveforms[key].get_waveform_tags()
                     
-                    if len(tags) == 0 or self.input_tag in tags:
+                    if len(tags) == 0 or (self.input_tag and self.input_tag not in tags):
+                        # no available waveform tag
                         continue
 
                     tag = self.input_tag or tags[0]
@@ -154,15 +152,18 @@ class ASDFProcessor:
         
         return keys
     
-    def _process(self, input_ds: List[ASDFDataSet], keys: Dict[str, List[str]]):
+    def _process(self, input_ds: List[ASDFDataSet], keys: Dict[str, List[str]], writer: ASDFWriter):
         """Process data in current rank."""
-        output = {}
+        from mpi4py.MPI import COMM_WORLD as comm
+
+        myrank = comm.Get_rank()
+        nranks = comm.Get_size()
 
         # default output tag
         output_tag = self.output_tag or self.input_tag or self.input_type
 
         for i, key in enumerate(keys):
-            if i % self._size == self._rank:
+            if i % nranks == myrank:
                 accessors = []
 
                 # get parameters for processing function
@@ -177,11 +178,11 @@ class ASDFProcessor:
                     if not isinstance(result, dict):
                         result = {output_tag: result}
                     
-                    for key2, val in result.items():
+                    for tag, val in result.items():
                         if isinstance(val, tuple):
-                            result[key2] = ASDFAuxiliary(*val)
-
-                    output[key] = result
+                            val = ASDFAuxiliary(*val)
+                        
+                        writer.add(val, tag, key)
                 
                 except Exception as e:
                     self._raise(e)
@@ -189,118 +190,12 @@ class ASDFProcessor:
         # close input dataset
         for ds in input_ds:
             del ds
-        
-        return output
-
-    def _write(self, output: Dict[str, ASDFOutput]):
-        """Write data to output ASDFDataSet."""
-        from mpi4py.MPI import COMM_WORLD as comm
-        from pyasdf import ASDFDataSet
-
-        # write to output dataset
-        def write():
-            with ASDFDataSet(self.dst, mode='a', mpi=False, compression=None) as ds:
-                """Write to output dataset."""
-                for key, val in output.items():
-                    for output_tag, data in val.items():
-                        if isinstance(data, Stream) or isinstance(data, Trace):
-                            # write waveform data
-                            ds.add_waveforms(data, output_tag)
-                        
-                        elif isinstance(data, ASDFAuxiliary):
-                            # write auxiliary data
-                            ds.add_auxiliary_data(
-                                data = data.data,
-                                data_type = output_tag,
-                                path = key,
-                                parameters = data.parameters)
-            
-        # determine the process that manages write operations
-        lock_file = self.dst + '.lock'
-
-        if not exists(lock_file):
-            with open(lock_file, 'a') as f:
-                f.write(str(self._rank) + ' ')
-
-        source = None
-        
-        for _ in range(3):
-            with open(lock_file, 'r') as f:
-                try:
-                    source = int(f.read().split(' ')[0])
-                
-                except Exception as e:
-                    sleep(0.1)
-                
-                else:
-                    break
-        
-        if source is None:
-            raise IOError('unable to read lock file')
-        
-        if source == self._rank:
-            write()
-
-            # current writing processes
-            writing = None
-
-            # processes finished processing and await writing
-            pending: List[int] = []
-
-            # processes finished writing
-            done = 1
-
-            while done < self._size:
-                rank = comm.recv()
-
-                if writing is None:
-                    comm.send(rank, dest=rank)
-                    writing = rank
-                
-                elif rank == writing:
-                    done += 1
-
-                    if len(pending):
-                        writing = pending.pop(0)
-                        comm.send(writing, dest=writing)
-                    
-                    else:
-                        writing = None
-                
-                else:
-                    pending.append(rank)
-            
-            check_call(f'rm -f {self.dst}.lock', shell=True)
-        
-        else:
-            # request write
-            comm.send(self._rank, dest=source)
-            
-            if comm.recv(source=source) == self._rank:
-                write()
-
-                # notify write complete
-                comm.send(self._rank, dest=source)
     
-    def run(self, **kwargs):
+    def run(self):
         """Process and write dataset."""
         from mpi4py.MPI import COMM_WORLD as comm
 
-        # backup current fields and update with kwargs
-        backup = {}
-
-        for f in fields(self):
-            if f.name[0] != '_':
-                backup[f.name] = getattr(self, f.name)
-        
-        for key, val in kwargs.items():
-            setattr(self, key, val)
-
         self._check()
-        
-        # get MPI info
-        self._rank = comm.Get_rank()
-        self._size = comm.Get_size()
         
         # open input dataset(s)
         try:
@@ -311,9 +206,10 @@ class ASDFProcessor:
             input_ds = []
 
         # get keys to be processed
-        if self._rank == 0:
+        if comm.Get_rank() == 0:
             try:
-                keys = self._read(input_ds)
+                self._copy_meta(input_ds)
+                keys = self._get_keys(input_ds)
             
             except Exception as e:
                 self._raise(e)
@@ -325,11 +221,9 @@ class ASDFProcessor:
         keys = comm.bcast(keys, root=0)
 
         # process and save output
-        self._write(self._process(input_ds, keys))
-
-        # restore origional fields
-        for key, val in backup.items():
-            setattr(self, key, val)
+        try:
+            self._process(input_ds, keys, writer := ASDFWriter(self.dst))
+            writer.write()
         
-        # sync processes
-        comm.Barrier()
+        except Exception as e:
+            self._raise(e)
