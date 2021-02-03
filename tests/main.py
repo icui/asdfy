@@ -106,7 +106,7 @@ def test():
 
     if rank == 0:
         print('test1: stream -> stream')
-        assert len(ap.access()) == 9
+        assert len(ap.access()[0]) == 9
     
     ap.run()
 

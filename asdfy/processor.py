@@ -243,7 +243,7 @@ class ASDFProcessor:
         """Get all accessors."""
         input_ds = self._open()
         keys = self._get_keys(input_ds)
-        accessors = {}
+        accessors: Dict[str, List[ASDFAccessor]] = {}
 
         for key in keys:
             accessors[key] = []
