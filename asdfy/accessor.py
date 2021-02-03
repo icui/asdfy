@@ -1,15 +1,25 @@
 from __future__ import annotations
 
-from collections import namedtuple
-from dataclasses import dataclass
-from typing import Literal, Tuple, TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import Literal, Tuple, TYPE_CHECKING, cast
+
+import numpy as np
 
 if TYPE_CHECKING:
     from pyasdf import ASDFDataSet
+    from obspy import Trace, Inventory
+    from obspy.core.trace import Stats
 
 
 # input argument for auxiliary data
-ASDFAuxiliary = namedtuple('ASDFAuxiliary', ['data', 'parameters'])
+@dataclass
+class ASDFAuxiliary:
+    """Auxiliary data and parameters in ASDFDataSet"""
+    # data array
+    data: np.ndarray
+
+    # data parameters
+    parameters: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -33,64 +43,38 @@ class ASDFAccessor:
             return self.auxiliary.data
         
         if self.key[0] == 'trace':
-            return self.trace.data
-        
-        return None
+            return cast(np.ndarray, self.trace.data)
     
     @property
     def stats(self):
         """Stats for waveform data"""
         if self.key[0] == 'trace':
-            return self.trace.stats
+            return cast(Stats, self.trace.stats)
         
-        return {}
-
     @property
     def parameters(self):
         """Parameters for auxiliary data"""
         if self.key[0] == 'auxiliary':
             return self.auxiliary.parameters
-        
-        return {}
     
     @property
     def auxiliary(self):
         """Auxiliary data group."""
-        import numpy as np
-        
         if self.key[0] == 'auxiliary':
             group = self.ds.auxiliary_data[self.key[1]][self.key[2]]
             return ASDFAuxiliary(np.array(group.data), dict(group.parameters))
-        
-        return None
-    
-    @property
-    def waveform(self):
-        """ASDF waveform accessor."""
-        if self.key[0] == 'auxiliary':
-            return None
-        
-        if self.key[0] == 'trace':
-            return self.ds.waveforms['_'.join(self.key[2].split('_')[:2])]
-        
-        else:
-            return self.ds.waveforms[self.key[2]]
 
     @property
     def stream(self):
         """Obspy Stream object."""
         if self.key[0] != 'auxiliary':
-            return self.waveform[self.key[1]]
-        
-        return None
+            return self.ds.waveforms[self.station][self.key[1]]
 
     @property
     def trace(self):
         """Obspy Trace object."""
         if self.key[0] == 'trace':
-            return self.stream.select(component=self.component)[0]
-        
-        return None
+            return cast(Trace, self.stream.select(component=self.component)[0])
     
     @property
     def station(self):
@@ -103,22 +87,13 @@ class ASDFAccessor:
         """Trace component."""
         if self.key[0] == 'trace':
             return self.key[2].split('_')[-1][-1]
-        
-        return None
-
-    @property
-    def catalog(self):
-        """Attached event data."""
-        return self.ds.events
 
     @property
     def inventory(self):
         """Attached station data."""
-        if wav := self.waveform:
-            if hasattr(wav, 'StationXML'):
-                return wav.StationXML
-        
-        return None
+        if self.key[0] != 'auxiliary':
+            if hasattr(waveform := self.ds.waveforms[self.station], 'StationXML'):
+                return cast(Inventory, waveform.StationXML)
     
     @property
     def target(self):
