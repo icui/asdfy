@@ -8,6 +8,7 @@ import numpy as np
 if TYPE_CHECKING:
     from pyasdf import ASDFDataSet
     from obspy import Stream, Trace, Inventory
+    from obspy.core.event import Origin
     from obspy.core.trace import Stats
 
 
@@ -94,6 +95,12 @@ class ASDFAccessor:
         if self.key[0] != 'auxiliary':
             if hasattr(waveform := self.ds.waveforms[self.station], 'StationXML'):
                 return getattr(waveform, 'StationXML')
+    
+    @property
+    def origin(self) -> Optional[Origin]:
+        """Event origin."""
+        if len(self.ds.events):
+            return self.ds.events[0].preferred_origin()
     
     @property
     def target(self) -> Union[Stream, Trace, ASDFAuxiliary]:
