@@ -31,7 +31,7 @@ class ASDFProcessor:
     dst: Optional[str] = None
 
     # processing function
-    func: Optional[Callable[..., ASDFOutput]] = None
+    func: Optional[Callable[..., Union[ASDFOutput, Dict[str, ASDFOutput]]]] = None
 
     # type of input data
     input_type: Literal['stream', 'trace', 'auxiliary'] = 'trace'
@@ -91,23 +91,13 @@ class ASDFProcessor:
         check_call(f'rm -f {self.dst}', shell=True)
         check_call(f'rm -f {self.dst}.lock', shell=True)
 
-        # copy event / station info
+        # copy event info
         output_ds = ASDFDataSet(self.dst, mode='w', mpi=False, compression=None)
         
         for ds in input_ds:
-            added: list = []
-
             for event in ds.events:
                 if event not in output_ds.events:
                     output_ds.add_quakeml(event)
-            
-            for station in ds.waveforms.list():
-                if station not in added:
-                    wav = ds.waveforms[station]
-
-                    if hasattr(wav, 'StationXML'):
-                        output_ds.add_stationxml(wav.StationXML)
-                        added.append(station)
         
         del output_ds
 
@@ -171,11 +161,15 @@ class ASDFProcessor:
         for i, key in enumerate(keys):
             if i % nranks == myrank:
                 accessors = []
+                inventory = None
 
                 # get parameters for processing function
                 for j, ds in enumerate(input_ds):
                     accessor = ASDFAccessor(ds, (self.input_type, keys[key][j], key))
                     accessors.append(accessor if self.accessor else accessor.target)
+
+                    if inventory is None:
+                        inventory = accessor.inventory
                 
                 # process data
                 try:
@@ -190,6 +184,9 @@ class ASDFProcessor:
                         
                         if writer:
                             writer.add(val, tag, key)
+                    
+                    if writer and inventory and any(val is not None for val in result.values()):
+                        writer.add(inventory, accessors[0].station)
                 
                 except Exception as e:
                     self._raise(e)
@@ -251,4 +248,4 @@ class ASDFProcessor:
             for j, ds in enumerate(input_ds):
                 accessors[key].append(ASDFAccessor(ds, (self.input_type, keys[key][j], key)))
         
-        return accessors, input_ds
+        return accessors
