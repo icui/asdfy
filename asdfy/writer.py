@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from .accessor import ASDFAuxiliary
 
 if TYPE_CHECKING:
-    from obspy import Stream, Trace
+    from obspy import Stream, Trace, Inventory
     from .processor import ASDFOutput
 
 
@@ -19,11 +19,14 @@ class ASDFWriter:
     # output ASDF file
     dst: str
 
-    # buffer of auxiliary data to be written
+    # buffer of auxiliary data
     _auxiliary: Dict[str, Tuple[ASDFAuxiliary, str]] = field(init=False, default_factory=dict)
 
-    # buffer of waveform data to be written
+    # buffer of waveform data
     _waveform: List[Tuple[Union[Stream, Trace], str]] = field(init=False, default_factory=list)
+
+    # buffer of StationXML data
+    _inventory: Dict[str, Inventory] = field(init=False, default_factory=dict)
 
     def _write(self):
         """Write buffer content to disk."""
@@ -44,11 +47,15 @@ class ASDFWriter:
                     path = path,
                     parameters = data.parameters)
             
+            # write station data
+            for data in self._inventory.values():
+                ds.add_stationxml(data)
+            
             self._auxiliary.clear()
 
-    def add(self, data: ASDFOutput, tag: str, path: Optional[str] = None):
+    def add(self, data: Union[ASDFOutput, Inventory], tag: str, path: Optional[str] = None):
         """Add data to buffer."""
-        from obspy import Stream, Trace
+        from obspy import Stream, Trace, Inventory
 
         if isinstance(data, Stream) or isinstance(data, Trace):
             self._waveform.append((data, tag))
@@ -58,6 +65,9 @@ class ASDFWriter:
                 raise TypeError('auxiliary data path not specified ({tag} {data})')
             
             self._auxiliary[path] = (data, tag)
+
+        elif isinstance(data, Inventory):
+            self._inventory[tag] = data
     
     def write(self):
         """Write buffer content in parallel, making sure one process writes at a time."""
