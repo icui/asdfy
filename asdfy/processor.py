@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 ASDFOutput = Optional[Union['Stream', 'Trace', ASDFAuxiliary, Tuple['np.ndarray', dict]]]
 
 
+# type of processing function
+ASDFFunction = Callable[..., Union[ASDFOutput, Dict[str, ASDFOutput]]]
+
+
 @dataclass
 class ASDFProcessor:
     """Iterates and processes data from one or multiple ASDFDataSet."""
@@ -31,7 +35,7 @@ class ASDFProcessor:
     dst: Optional[str] = None
 
     # processing function
-    func: Optional[Callable[..., Union[ASDFOutput, Dict[str, ASDFOutput]]]] = None
+    func: Optional[ASDFFunction] = None
 
     # type of input data
     input_type: Literal['stream', 'trace', 'auxiliary'] = 'trace'
