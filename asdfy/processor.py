@@ -162,14 +162,16 @@ class ASDFProcessor:
             if i % nranks == myrank:
                 accessors = []
                 inventory = None
+                station = None
 
                 # get parameters for processing function
                 for j, ds in enumerate(input_ds):
                     accessor = ASDFAccessor(ds, (self.input_type, keys[key][j], key))
                     accessors.append(accessor if self.accessor else accessor.target)
 
-                    if inventory is None:
+                    if inventory is None or station is None:
                         inventory = accessor.inventory
+                        station = accessor.station
                 
                 # process data
                 try:
@@ -185,8 +187,8 @@ class ASDFProcessor:
                         if writer:
                             writer.add(val, tag, key)
                     
-                    if writer and inventory and any(val is not None for val in result.values()):
-                        writer.add(inventory, accessors[0].station)
+                    if writer and inventory and station and any(val is not None for val in result.values()):
+                        writer.add(inventory, station)
                 
                 except Exception as e:
                     self._raise(e)
