@@ -19,7 +19,12 @@ def func1(stream: Stream):
 
 def func2(acc: ASDFAccessor):
     # save waveform by returning a Stream
-    return acc.stream
+    output = {}
+
+    for trace in acc.stream:
+        output[trace.stats.channel] = trace
+    
+    return output
 
 
 def func3(trace: Trace):
@@ -29,7 +34,7 @@ def func3(trace: Trace):
 
 
 def func4(syn: Trace, obs: Trace):
-    data = syn.data - obs.data
+    data = syn.data - obs.data # type: ignore
     stats = syn.stats
 
     # save as auxiliary data by returning a tuple
@@ -44,14 +49,14 @@ def func5(acc):
     from asdfy import ASDFAuxiliary
 
     # save as auxiliary data by returning namedtuple `ASDFAuxiliary`
-    return {'test2': ASDFAuxiliary(acc.data, acc.auxiliary.parameters)}
+    return ASDFAuxiliary(acc.data, acc.auxiliary.parameters)
 
 
 def func6(aux):
     from obspy import Trace
 
     # save waveform by returning a Trace
-    return {'test': Trace(aux.data, header=aux.parameters)}
+    return Trace(aux.data, header=aux.parameters)
 
 def reset():
     from subprocess import check_call
@@ -73,10 +78,10 @@ def verify():
         assert hasattr(ds.waveforms['II.BFO'], 'StationXML')
 
     with ASDFDataSet('proc6.h5', mode='r', mpi=False) as ds:
-        data_proc = ds.waveforms['II.BFO'].test[0].data
+        data_proc = ds.waveforms['II.BFO'].test[0].data # type: ignore
     
     with ASDFDataSet('traces_proc.h5', mode='r', mpi=False) as ds:
-        data_ref = ds.waveforms['II.BFO'].test[0].data
+        data_ref = ds.waveforms['II.BFO'].test[0].data # type: ignore
     
     assert norm(data_proc - data_ref) / norm(data_ref) < 1e-4
 
@@ -106,7 +111,7 @@ def test():
 
     if rank == 0:
         print('test1: stream -> stream')
-        assert len(ap.access()[0]) == 9
+        assert len(ap.access()) == 9
     
     ap.run()
 
@@ -138,7 +143,7 @@ def test():
     if rank == 0:
         print('test6: auxiliary -> stream')
     
-    ASDFProcessor('proc5.h5', 'proc6.h5', func6, input_type='auxiliary', input_tag='test2').run()
+    ASDFProcessor('proc5.h5', 'proc6.h5', func6, input_type='auxiliary').run()
 
     if rank == 0:
         verify()

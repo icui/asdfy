@@ -133,7 +133,7 @@ class ASDFProcessor:
 
                     if self.input_type == 'trace':
                         for trace in ds.waveforms[key][tag]:
-                            add(key + '_MX' + trace.stats.component, tag)
+                            add(key + '_' + trace.stats.channel, tag)
                     
                     else:
                         add(key, tag)
@@ -155,14 +155,14 @@ class ASDFProcessor:
         myrank = comm.Get_rank()
         nranks = comm.Get_size()
 
-        # default output tag
-        output_tag = self.output_tag or self.input_tag or self.input_type
-
         for i, key in enumerate(keys):
             if i % nranks == myrank:
                 accessors = []
                 inventory = None
                 station = None
+
+                # output tag
+                output_tag = self.output_tag or self.input_tag or keys[key][0]
 
                 # get parameters for processing function
                 for j, ds in enumerate(input_ds):
@@ -177,18 +177,25 @@ class ASDFProcessor:
                 try:
                     result = self.func(*accessors)
 
-                    if not isinstance(result, dict):
-                        result = {output_tag: result}
-                    
-                    for tag, val in result.items():
-                        if isinstance(val, tuple):
-                            val = ASDFAuxiliary(*val)
+                    if writer and result is not None:
+                        if isinstance(result, dict):
+                            for cmp, val in result.items():
+                                if val is None:
+                                    continue
+
+                                if isinstance(val, tuple):
+                                    val = ASDFAuxiliary(*val)
+
+                                writer.add(val, output_tag, key + '_' + cmp)
                         
-                        if writer:
-                            writer.add(val, tag, key)
+                        else:
+                            if isinstance(result, tuple):
+                                result = ASDFAuxiliary(*result)
+                            
+                            writer.add(result, output_tag, key)
                     
-                    if writer and inventory and station and any(val is not None for val in result.values()):
-                        writer.add(inventory, station)
+                        if inventory and station:
+                            writer.add(inventory, station)
                 
                 except Exception as e:
                     self._raise(e)
