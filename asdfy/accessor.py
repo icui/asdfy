@@ -78,6 +78,14 @@ class ASDFAccessor:
             return self.stream.select(component=self.component)[0] # type: ignore
     
     @property
+    def event(self) -> Optional[str]:
+        """Event name."""
+        if len(self.ds.events) > 0:
+            for d in self.ds.events[0].event_descriptions:
+                if d.type == 'earthquake name':
+                    return d.text
+    
+    @property
     def station(self) -> Optional[str]:
         """Station name."""
         if self.key[0] != 'auxiliary':
