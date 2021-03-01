@@ -137,7 +137,7 @@ class ASDFProcessor:
 
                     if self.input_type == 'trace':
                         for trace in ds.waveforms[key][tag]:
-                            add(key + '_' + trace.stats.channel, tag)
+                            add(key + '_' + trace.stats.component, tag)
                     
                     else:
                         add(key, tag)
