@@ -68,12 +68,6 @@ Optional[str] = None
 ```
 Output waveform tag or auxiliary group, None for using input_tag or input_type
 
-##### pairwise
-```
-bool = False
-```
-process input data pairwise
-
 ##### accessor
 ```
 bool = False

@@ -46,19 +46,19 @@ class ASDFProcessor:
     # output waveform tag or auxiliary group, None for using input_tag or input_type
     output_tag: Optional[str] = None
 
-    # process input data pairwise
-    pairwise: bool = False
-
     # pass the origional accessor to the processing function
     accessor: bool = False
+
+    # process input data pairwise
+    pairwise: bool = False
 
     # callback when error occurs
     onerror: Optional[Callable[[Exception], None]] = None
 
     def _check(self):
         """Make sure properties are correct."""
-        if self.pairwise and not isinstance(self.src, str) and len(list(self.src)) > 1:
-            raise ValueError('pairwise processing is only available for single dataset')
+        if self.pairwise and not self.accessor:
+            raise ValueError('accessor must be True to enable pairwise processing')
         
         if self.input_type not in ('stream', 'trace', 'auxiliary'):
             raise ValueError('unsupported input type', self.input_type)
@@ -251,6 +251,8 @@ class ASDFProcessor:
     
     def access(self):
         """Get all accessors."""
+        self._check()
+
         input_ds = self._open()
         keys = self._get_keys(input_ds)
         accessors: Dict[str, List[ASDFAccessor]] = {}

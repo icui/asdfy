@@ -37,6 +37,9 @@ class ASDFAccessor:
     # [2]: station for stream, station + component for trace, data path for auxiliary
     key: Tuple[Literal['stream', 'trace', 'auxiliary'], str, str]
 
+    # other accessors for pairwise processing
+    pairs: Optional[list[ASDFAccessor]] = None
+
     @property
     def data(self) -> Optional[np.ndarray]:
         """Raw data as numpy array."""
@@ -90,18 +93,30 @@ class ASDFAccessor:
         """Station name."""
         if self.key[0] != 'auxiliary':
             return '.'.join(self.key[2].split('_')[:2])
+
+        if len(path := self.key[2].split('_')) == 3:
+            return '.'.join(path[:2])
+    
+    @property
+    def channel(self) -> Optional[str]:
+        """Trace channel."""
+        if self.key[0] == 'trace':
+            return self.key[2].split('_')[-1]
+
+        if self.key[2] == 'auxiliary' and len(path := self.key[2].split('_')) == 3:
+            return path[2]
     
     @property
     def component(self) -> Optional[str]:
         """Trace component."""
-        if self.key[0] == 'trace':
-            return self.key[2].split('_')[-1][-1]
+        if channel := self.channel:
+            return channel[-1]
 
     @property
     def inventory(self) -> Optional[Inventory]:
         """Attached station data."""
-        if self.key[0] != 'auxiliary':
-            if hasattr(waveform := self.ds.waveforms[self.station], 'StationXML'):
+        if station := self.station:
+            if hasattr(waveform := self.ds.waveforms[station], 'StationXML'):
                 return getattr(waveform, 'StationXML')
     
     @property
