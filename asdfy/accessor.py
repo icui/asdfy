@@ -37,7 +37,7 @@ class ASDFAccessor:
     # [2]: station for stream, station + component for trace, data path for auxiliary
     key: Tuple[Literal['stream', 'trace', 'auxiliary', 'auxiliary_group'], str, str]
 
-    # all accessors in self.ds
+    # all accessors in self.ds (for pairwise processing)
     fellows: Optional[list[ASDFAccessor]] = None
 
     @property

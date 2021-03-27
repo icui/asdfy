@@ -19,6 +19,12 @@ def func1(stream: Stream):
 
 def func2(acc: ASDFAccessor):
     # save waveform by returning a Stream
+    assert acc.fellows and len(acc.fellows) == 9, f'incorrect station number'
+
+    for acc2 in acc.fellows:
+        assert acc2.component == acc.component
+        assert acc2.ds == acc.ds
+    
     output = {}
 
     for trace in acc.stream:
@@ -33,9 +39,20 @@ def func3(trace: Trace):
     return trace
 
 
-def func4(syn: Trace, obs: Trace):
+def func4(syn_acc, obs_acc):
+    syn = syn_acc.trace
+    obs = obs_acc.trace
     data = syn.data - obs.data # type: ignore
     stats = syn.stats
+
+    assert len(syn_acc.fellows) == 27, f'incorrect station number {len(syn_acc.fellows)}'
+    assert len(obs_acc.fellows) == 27, f'incorrect station number {len(obs_acc.fellows)}'
+
+    for acc in syn_acc.fellows:
+        assert acc.ds is syn_acc.ds
+    
+    for acc in obs_acc.fellows:
+        assert acc.ds is obs_acc.ds
 
     # save as auxiliary data by returning a tuple
     return data, {
@@ -137,7 +154,7 @@ def test():
     if rank == 0:
         print('test4: (trace, trace) -> auxiliary')
     
-    ASDFProcessor(('proc1.h5', 'proc3.h5'), 'proc4.h5', func4, output_tag='test').run()
+    ASDFProcessor(('proc1.h5', 'proc3.h5'), 'proc4.h5', func4, accessor=True, output_tag='test').run()
 
     # process auxiliary data with more info passed
     if rank == 0:
