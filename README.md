@@ -52,7 +52,7 @@ Processing function, each argument correspond to an input dataset.
 
 ##### input_type
 ```
-Literal['stream', 'trace', 'auxiliary'] = 'trace'
+Literal['stream', 'trace', 'auxiliary', 'auxiliary_group'] = 'trace'
 ```
 Type of input data
 

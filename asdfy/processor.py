@@ -38,7 +38,7 @@ class ASDFProcessor:
     func: Optional[ASDFFunction] = None
 
     # type of input data
-    input_type: Literal['stream', 'trace', 'auxiliary'] = 'trace'
+    input_type: Literal['stream', 'trace', 'auxiliary', 'auxiliary_group'] = 'trace'
 
     # input waveform tag or auxiliary group, None for using the first available
     input_tag: Optional[str] = None
@@ -60,7 +60,7 @@ class ASDFProcessor:
         if self.pairwise and not self.accessor:
             raise ValueError('accessor must be True to enable pairwise processing')
         
-        if self.input_type not in ('stream', 'trace', 'auxiliary'):
+        if self.input_type not in ('stream', 'trace', 'auxiliary', 'auxiliary_group'):
             raise ValueError('unsupported input type', self.input_type)
     
     def _raise(self, e: Exception):
@@ -123,6 +123,20 @@ class ASDFProcessor:
                 
                 for key in ds.auxiliary_data[tag].list():
                     add(key, tag)
+            
+            elif self.input_type == 'auxiliary_group':
+                # add auxiliary data group
+                tag = self.input_tag or ds.auxiliary_data.list()[0]
+                groups = set()
+
+                for key in ds.auxiliary_data[tag].list():
+                    keypath = key.split('_')
+
+                    if len(keypath := key.split('_')) > 1:
+                        groups.add('_'.join(keypath[:-1]))
+                    
+                for key in groups:
+                    add(key, tag)
 
             else:
                 # add waveform data
@@ -148,6 +162,19 @@ class ASDFProcessor:
                 del keys[key]
         
         return keys
+
+    def _get_accessors(self, input_ds: List[ASDFDataSet], keys: Dict[str, List[str]]):
+        """Create accessors from input_ds and keys."""
+        accessors: Dict[str, list] = {}
+
+        for key in keys:
+            accessors[key] = []
+
+            for j, ds in enumerate(input_ds):
+                accessor = ASDFAccessor(ds, (self.input_type, keys[key][j], key))
+                accessors[key].append(accessor if self.accessor else accessor.target)
+        
+        return accessors
     
     def _process(self, input_ds: List[ASDFDataSet], keys: Dict[str, List[str]], writer: Optional[ASDFWriter] = None):
         """Process data in current rank."""
@@ -159,9 +186,12 @@ class ASDFProcessor:
         myrank = comm.Get_rank()
         nranks = comm.Get_size()
 
+        # # all accessors in input_ds
+        # accessors = self._get_accessors(input_ds, keys)
+
         for i, key in enumerate(keys):
             if i % nranks == myrank:
-                accessors = []
+                args = []
                 inventory = None
                 station = None
 
@@ -171,7 +201,7 @@ class ASDFProcessor:
                 # get parameters for processing function
                 for j, ds in enumerate(input_ds):
                     accessor = ASDFAccessor(ds, (self.input_type, keys[key][j], key))
-                    accessors.append(accessor if self.accessor else accessor.target)
+                    args.append(accessor if self.accessor else accessor.target)
 
                     if inventory is None or station is None:
                         inventory = accessor.inventory
@@ -179,7 +209,7 @@ class ASDFProcessor:
                 
                 # process data
                 try:
-                    result = self.func(*accessors)
+                    result = self.func(*args)
 
                     if writer and result is not None:
                         if isinstance(result, dict):
@@ -255,12 +285,5 @@ class ASDFProcessor:
 
         input_ds = self._open()
         keys = self._get_keys(input_ds)
-        accessors: Dict[str, List[ASDFAccessor]] = {}
 
-        for key in keys:
-            accessors[key] = []
-
-            for j, ds in enumerate(input_ds):
-                accessors[key].append(ASDFAccessor(ds, (self.input_type, keys[key][j], key)))
-        
-        return accessors
+        return self._get_accessors(input_ds, keys)

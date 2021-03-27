@@ -52,11 +52,17 @@ def func5(acc):
     return ASDFAuxiliary(acc.data, acc.auxiliary.parameters)
 
 
-def func6(aux):
-    from obspy import Trace
+def func6(aux_group):
+    from obspy import Trace, Stream
 
     # save waveform by returning a Trace
-    return Trace(aux.data, header=aux.parameters)
+    traces = []
+
+    for cha, aux in aux_group.items():
+        assert cha[-1] == aux.parameters['component']
+        traces.append(Trace(aux.data, header=aux.parameters))
+    
+    return Stream(traces)
 
 def reset():
     from subprocess import check_call
@@ -141,9 +147,9 @@ def test():
 
     # process auxiliary data
     if rank == 0:
-        print('test6: auxiliary -> stream')
+        print('test6: auxiliary_group -> stream')
     
-    ASDFProcessor('proc5.h5', 'proc6.h5', func6, input_type='auxiliary').run()
+    ASDFProcessor('proc5.h5', 'proc6.h5', func6, input_type='auxiliary_group').run()
 
     if rank == 0:
         verify()

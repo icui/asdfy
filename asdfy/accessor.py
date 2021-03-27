@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal, Tuple, Optional, Union, TYPE_CHECKING, cast
+from typing import Literal, Tuple, Optional, Union, Dict, TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -35,10 +35,10 @@ class ASDFAccessor:
     # [0]: data type
     # [1]: waveform tag for stream / trace, group for auxiliary
     # [2]: station for stream, station + component for trace, data path for auxiliary
-    key: Tuple[Literal['stream', 'trace', 'auxiliary'], str, str]
+    key: Tuple[Literal['stream', 'trace', 'auxiliary', 'auxiliary_group'], str, str]
 
-    # other accessors for pairwise processing
-    pairs: Optional[list[ASDFAccessor]] = None
+    # all accessors in self.ds
+    fellows: Optional[list[ASDFAccessor]] = None
 
     @property
     def data(self) -> Optional[np.ndarray]:
@@ -63,15 +63,33 @@ class ASDFAccessor:
     
     @property
     def auxiliary(self) -> Optional[ASDFAuxiliary]:
-        """Auxiliary data group."""
+        """Auxiliary data."""
         if self.key[0] == 'auxiliary':
             group = self.ds.auxiliary_data[self.key[1]][self.key[2]]
             return ASDFAuxiliary(np.array(group.data), dict(group.parameters))
+    
+    @property
+    def auxiliary_group(self) -> Optional[Dict[str, ASDFAuxiliary]]:
+        """Group of auxiliary data."""
+        if self.key[0] == 'auxiliary_group':
+            groups = {}
+            auxiliaries = {}
+            n = len(self.key[2]) + 1
+            ds = self.ds.auxiliary_data[self.key[1]]
+
+            for key in ds.list():
+                if key.startswith(self.key[2] + '_'):
+                    groups[key[n:]] = ds[key]
+                
+            for key, group in groups.items():
+                auxiliaries[key] = ASDFAuxiliary(np.array(group.data), dict(group.parameters))
+
+            return auxiliaries
 
     @property
     def stream(self) -> Optional[Stream]:
         """Obspy Stream object."""
-        if self.key[0] != 'auxiliary':
+        if self.key[0] in ('trace', 'stream'):
             return self.ds.waveforms[self.station][self.key[1]]
 
     @property
@@ -91,10 +109,7 @@ class ASDFAccessor:
     @property
     def station(self) -> Optional[str]:
         """Station name."""
-        if self.key[0] != 'auxiliary':
-            return '.'.join(self.key[2].split('_')[:2])
-
-        if len(path := self.key[2].split('_')) == 3:
+        if len(path := self.key[2].split('_')) >= 2:
             return '.'.join(path[:2])
     
     @property
@@ -103,8 +118,8 @@ class ASDFAccessor:
         if self.key[0] == 'trace':
             return self.key[2].split('_')[-1]
 
-        if self.key[2] == 'auxiliary' and len(path := self.key[2].split('_')) == 3:
-            return path[2]
+        if self.key[2] == 'auxiliary' and len(path := self.key[2].split('_')) >= 3:
+            return path[-1]
     
     @property
     def component(self) -> Optional[str]:
