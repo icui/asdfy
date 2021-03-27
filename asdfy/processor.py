@@ -165,14 +165,13 @@ class ASDFProcessor:
 
     def _get_accessors(self, input_ds: List[ASDFDataSet], keys: Dict[str, List[str]]):
         """Create accessors from input_ds and keys."""
-        accessors: Dict[str, list] = {}
+        accessors: Dict[str, List[ASDFAccessor]] = {}
 
         for key in keys:
             accessors[key] = []
 
             for j, ds in enumerate(input_ds):
-                accessor = ASDFAccessor(ds, (self.input_type, keys[key][j], key))
-                accessors[key].append(accessor if self.accessor else accessor.target)
+                accessors[key].append(ASDFAccessor(ds, (self.input_type, keys[key][j], key)))
         
         return accessors
     
@@ -186,8 +185,19 @@ class ASDFProcessor:
         myrank = comm.Get_rank()
         nranks = comm.Get_size()
 
-        # # all accessors in input_ds
-        # accessors = self._get_accessors(input_ds, keys)
+        # all accessors in input_ds
+        accessors = self._get_accessors(input_ds, keys)
+
+        # add accessor.fellows
+        if self.accessor:
+            for j in range(len(input_ds)):
+                fellows: List[ASDFAccessor] = []
+
+                for key in keys:
+                    fellows.append(accessors[key][j])
+            
+                for key in keys:
+                    accessors[key][j].fellows = fellows
 
         for i, key in enumerate(keys):
             if i % nranks == myrank:
@@ -200,7 +210,7 @@ class ASDFProcessor:
 
                 # get parameters for processing function
                 for j, ds in enumerate(input_ds):
-                    accessor = ASDFAccessor(ds, (self.input_type, keys[key][j], key))
+                    accessor = accessors[key][j]
                     args.append(accessor if self.accessor else accessor.target)
 
                     if inventory is None or station is None:
