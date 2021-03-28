@@ -17,6 +17,10 @@ if TYPE_CHECKING:
     from obspy import Stream, Trace
 
 
+# type of input data
+ASDFInput = Literal['stream', 'trace', 'auxiliary', 'auxiliary_group']
+
+
 # type of output data
 ASDFOutput = Optional[Union['Stream', 'Trace', ASDFAuxiliary, Tuple['np.ndarray', dict]]]
 
@@ -38,7 +42,7 @@ class ASDFProcessor:
     func: Optional[ASDFFunction] = None
 
     # type of input data
-    input_type: Literal['stream', 'trace', 'auxiliary', 'auxiliary_group'] = 'trace'
+    input_type: Union[ASDFInput, List[ASDFInput]] = 'trace'
 
     # input waveform tag or auxiliary group, None for using the first available
     input_tag: Optional[str] = None
@@ -55,13 +59,21 @@ class ASDFProcessor:
     # callback when error occurs
     onerror: Optional[Callable[[Exception], None]] = None
 
+    def _input_type(self, j: int) -> ASDFInput:
+        """List of input data types."""
+        if isinstance(self.input_type, list):
+            return self.input_type[j]
+        
+        return self.input_type
+
     def _check(self):
         """Make sure properties are correct."""
         if self.pairwise and not self.accessor:
             raise ValueError('accessor must be True to enable pairwise processing')
         
-        if self.input_type not in ('stream', 'trace', 'auxiliary', 'auxiliary_group'):
-            raise ValueError('unsupported input type', self.input_type)
+        for j in range(1 if isinstance(self.src, str) else len(list(self.src))):
+            if self._input_type(j) not in ('stream', 'trace', 'auxiliary', 'auxiliary_group'):
+                raise ValueError('unsupported input type', self.input_type)
     
     def _raise(self, e: Exception):
         if self.onerror:
@@ -74,10 +86,14 @@ class ASDFProcessor:
         """Open input dataset(s)."""
         from pyasdf import ASDFDataSet
 
+        opened = {}
         input_ds: List[ASDFDataSet] = []
 
         for src in ((self.src,) if isinstance(self.src, str) else self.src):
-            input_ds.append(ASDFDataSet(src, mode='r', mpi=False))
+            if src not in opened:
+                opened[src] = ASDFDataSet(src, mode='r', mpi=False)
+
+            input_ds.append(opened[src])
     
         return input_ds
     
@@ -116,15 +132,15 @@ class ASDFProcessor:
             elif k in keys:
                 keys[k].append(t)
 
-        for ds in input_ds:
-            if self.input_type == 'auxiliary':
+        for j, ds in enumerate(input_ds):
+            if self._input_type(j) == 'auxiliary':
                 # add auxiliary data
                 tag = self.input_tag or ds.auxiliary_data.list()[0]
                 
                 for key in ds.auxiliary_data[tag].list():
                     add(key, tag)
             
-            elif self.input_type == 'auxiliary_group':
+            elif self._input_type(j) == 'auxiliary_group':
                 # add auxiliary data group
                 tag = self.input_tag or ds.auxiliary_data.list()[0]
                 groups = set()
@@ -149,7 +165,7 @@ class ASDFProcessor:
 
                     tag = self.input_tag or tags[0]
 
-                    if self.input_type == 'trace':
+                    if self._input_type(j) == 'trace':
                         for trace in ds.waveforms[key][tag]:
                             add(key + '_' + trace.stats.component, tag)
                     
@@ -171,7 +187,7 @@ class ASDFProcessor:
             accessors[key] = []
 
             for j, ds in enumerate(input_ds):
-                accessors[key].append(ASDFAccessor(ds, (self.input_type, keys[key][j], key)))
+                accessors[key].append(ASDFAccessor(ds, (self._input_type(j), keys[key][j], key)))
         
         return accessors
     
@@ -246,7 +262,7 @@ class ASDFProcessor:
 
         # close input dataset
         for ds in input_ds:
-            del ds
+            ds.__del__()
     
     def run(self):
         """Process and write dataset."""
