@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sys import stderr
 from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from os.path import exists
 from time import sleep
@@ -35,21 +36,36 @@ class ASDFWriter:
         with ASDFDataSet(self.dst, mode='a', mpi=False, compression=None) as ds:
             # write waveform data
             for (waveform, tag) in self._waveform:
-                ds.add_waveforms(waveform, tag)
+                try:
+                    ds.add_waveforms(waveform, tag)
+                
+                except Exception as e:
+                    print(waveform, file=stderr)
+                    raise e
             
             self._waveform.clear()
             
             # write auxiliary data
             for path, (data, tag) in self._auxiliary.items():
-                ds.add_auxiliary_data(
-                    data = data.data,
-                    data_type = tag,
-                    path = path,
-                    parameters = data.parameters)
+                try:
+                    ds.add_auxiliary_data(
+                        data = data.data,
+                        data_type = tag,
+                        path = path,
+                        parameters = data.parameters)
+                
+                except Exception as e:
+                    print(data, path, file=stderr)
+                    raise e
             
             # write station data
             for data in self._inventory.values():
-                ds.add_stationxml(data)
+                try:
+                    ds.add_stationxml(data)
+                
+                except Exception as e:
+                    print(data, file=stderr)
+                    raise e
             
             self._auxiliary.clear()
 
