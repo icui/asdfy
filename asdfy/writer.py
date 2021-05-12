@@ -65,7 +65,6 @@ class ASDFWriter:
                 
                 except Exception as e:
                     print(data, file=stderr)
-                    raise e
             
             self._auxiliary.clear()
 
