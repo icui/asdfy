@@ -57,7 +57,7 @@ class ASDFProcessor:
     pairwise: bool = False
 
     # callback when error occurs
-    onerror: Union[Callable[[Exception], None], None, Literal['raise']] = 'raise'
+    onerror: Union[Callable[[Exception], None], None, Literal['raise']] = None
 
     def _input_type(self, j: int) -> ASDFInput:
         """List of input data types."""
