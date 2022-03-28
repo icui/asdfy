@@ -57,7 +57,7 @@ class ASDFProcessor:
     pairwise: bool = False
 
     # callback when error occurs
-    onerror: Optional[Callable[[Exception], None]] = None
+    onerror: Union[Callable[[Exception], None], None, Literal['raise']] = 'raise'
 
     def _input_type(self, j: int) -> ASDFInput:
         """List of input data types."""
@@ -76,7 +76,10 @@ class ASDFProcessor:
                 raise ValueError('unsupported input type', self.input_type)
     
     def _raise(self, e: Exception):
-        if self.onerror:
+        if self.onerror == 'raise':
+            raise e
+
+        elif self.onerror:
             self.onerror(e)
         
         else:
