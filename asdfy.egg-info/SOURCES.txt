@@ -1,0 +1,11 @@
+LICENSE
+README.md
+setup.py
+asdfy/__init__.py
+asdfy/accessor.py
+asdfy/processor.py
+asdfy/writer.py
+asdfy.egg-info/PKG-INFO
+asdfy.egg-info/SOURCES.txt
+asdfy.egg-info/dependency_links.txt
+asdfy.egg-info/top_level.txt

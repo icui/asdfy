@@ -1,0 +1,99 @@
+Metadata-Version: 2.1
+Name: asdfy
+Version: 0.1.18
+Summary: A parallel processing library for pyasdf.
+Home-page: https://github.com/icui/asdfy
+Author: Congyue Cui
+Author-email: ccui@princeton.edu
+License: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+# Asdfy
+
+----
+
+**A library to process ASDFDataSet(s) from [pyasdf](https://github.com/seismicdata/pyasdf/).**
+
+----
+
+### Prerequisites
+```
+pyasdf
+mpi4py
+```
+
+### Installation
+```
+pip install asdfy
+```
+
+### Usage
+##### Basic usage
+```
+from asdfy import ASDFProcessor
+ASDFProcessor('input.h5', 'output.h5', process_func).run()
+```
+
+##### Defailed explination
+TBD. Refer to ```tests/main.py``` for now. To run tests:
+```
+cd tests
+mpi4un -n 4 python main.py
+```
+
+### ASDFProcessor
+##### src
+```
+Union[str, Iterable[str]]
+```
+Path to input ASDFDataSet(s)
+
+##### dst
+```
+str
+```
+Path to output ASDFDataSet
+
+##### func
+```
+Callable[..., ASDFOutput]
+```
+Processing function, each argument correspond to an input dataset.
+
+##### input_type
+```
+Literal['stream', 'trace', 'auxiliary', 'auxiliary_group'] = 'trace'
+```
+Type of input data
+
+##### input_tag
+```
+Optional[str] = None
+```
+Input waveform tag or auxiliary group, None for using the first available
+
+##### output_tag
+```
+Optional[str] = None
+```
+Output waveform tag or auxiliary group, None for using input_tag or input_type
+
+##### accessor
+```
+bool = False
+```
+Pass the origional accessor to the processing function. Set to .True. if you need event or station info.
+
+##### onerror
+```
+Optional[Callable[[Exception], None]] = None
+```
+Callback when error occurs
+
+
