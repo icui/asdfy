@@ -31,6 +31,30 @@ class ASDFWriter:
 
     def _write(self):
         """Write buffer content to disk."""
+        if self.dst.endswith('.h5'):
+            self._write_h5()
+        
+        elif self.dst.endswith('.json'):
+            self._write_json()
+
+    def _write_json(self):
+        import json
+
+        if exists(self.dst):
+            with open(self.dst, 'r') as f:
+                output = json.load(f)
+
+        else:
+            output = {}
+
+        # write auxiliary data
+        for path, (data, _) in self._auxiliary.items():
+            output[path] = data.parameters
+        
+        with open(self.dst, 'w') as f:
+            json.dump(output, f)
+
+    def _write_h5(self):
         from pyasdf import ASDFDataSet
 
         with ASDFDataSet(self.dst, mode='a', mpi=False, compression=None) as ds:
