@@ -115,14 +115,15 @@ class ASDFProcessor:
         check_call(f'rm -f {self.dst}.lock', shell=True)
 
         # copy event info
-        output_ds = ASDFDataSet(self.dst, mode='w', mpi=False, compression=None)
-        
-        for ds in input_ds:
-            for event in ds.events:
-                if event not in output_ds.events:
-                    output_ds.add_quakeml(event)
-        
-        del output_ds
+        if self.dst.endswith('.h5'):
+            output_ds = ASDFDataSet(self.dst, mode='w', mpi=False, compression=None)
+            
+            for ds in input_ds:
+                for event in ds.events:
+                    if event not in output_ds.events:
+                        output_ds.add_quakeml(event)
+            
+            del output_ds
 
     def _get_keys(self, input_ds: List[ASDFDataSet]):
         """Get paths to the data to be processed."""
