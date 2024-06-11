@@ -5,7 +5,7 @@ from sys import stderr
 from os.path import dirname
 from subprocess import check_call
 from dataclasses import dataclass
-from typing import Callable, List, Dict, Tuple, Union, Iterable, Literal, Optional, TYPE_CHECKING
+from typing import Callable, List, Dict, Tuple, Union, Iterable, Literal, Optional, Any, TYPE_CHECKING
 
 
 from .accessor import ASDFAccessor, ASDFAuxiliary
@@ -60,7 +60,7 @@ class ASDFProcessor:
     onerror: Union[Callable[[Exception], None], None, Literal['raise']] = None
 
     # MPI comm
-    comm = None
+    comm: Any = None
 
     def _input_type(self, j: int) -> ASDFInput:
         """List of input data types."""

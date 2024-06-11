@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sys import stderr
-from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, Union, Any, TYPE_CHECKING
 from os.path import exists
 from time import sleep
 from subprocess import check_call
@@ -21,7 +21,7 @@ class ASDFWriter:
     dst: str
 
     # MPI comm
-    comm = None
+    comm: Any = None
 
     # buffer of auxiliary data
     _auxiliary: Dict[str, Tuple[ASDFAuxiliary, str]] = field(init=False, default_factory=dict)
