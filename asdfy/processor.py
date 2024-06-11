@@ -59,6 +59,9 @@ class ASDFProcessor:
     # callback when error occurs
     onerror: Union[Callable[[Exception], None], None, Literal['raise']] = None
 
+    # MPI comm
+    comm = None
+
     def _input_type(self, j: int) -> ASDFInput:
         """List of input data types."""
         if isinstance(self.input_type, list):
@@ -194,10 +197,18 @@ class ASDFProcessor:
                 accessors[key].append(ASDFAccessor(ds, (self._input_type(j), keys[key][j], key)))
         
         return accessors
+
+    def _get_comm(self):
+        """Get MPI comm."""
+        if self.comm is None:
+            from mpi4py.MPI import COMM_WORLD as comm
+            return comm
+
+        return self.comm
     
     def _process(self, input_ds: List[ASDFDataSet], keys: Dict[str, List[str]], writer: Optional[ASDFWriter] = None):
         """Process data in current rank."""
-        from mpi4py.MPI import COMM_WORLD as comm
+        comm = self._get_comm()
         
         if self.func is None:
             return
@@ -270,7 +281,7 @@ class ASDFProcessor:
     
     def run(self):
         """Process and write dataset."""
-        from mpi4py.MPI import COMM_WORLD as comm
+        comm = self._get_comm()
 
         self._check()
         
@@ -300,7 +311,7 @@ class ASDFProcessor:
         # process and save output
         try:
             if self.dst:
-                self._process(input_ds, keys, writer := ASDFWriter(self.dst))
+                self._process(input_ds, keys, writer := ASDFWriter(self.dst, self.comm))
                 writer.write()
             
             else:

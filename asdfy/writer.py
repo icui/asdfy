@@ -20,6 +20,9 @@ class ASDFWriter:
     # output ASDF file
     dst: str
 
+    # MPI comm
+    comm = None
+
     # buffer of auxiliary data
     _auxiliary: Dict[str, Tuple[ASDFAuxiliary, str]] = field(init=False, default_factory=dict)
 
@@ -92,6 +95,14 @@ class ASDFWriter:
             
             self._auxiliary.clear()
 
+    def _get_comm(self):
+        """Get MPI comm."""
+        if self.comm is None:
+            from mpi4py.MPI import COMM_WORLD as comm
+            return comm
+
+        return self.comm
+
     def add(self, data: Union[ASDFOutput, Inventory], tag: str, path: Optional[str] = None):
         """Add data to buffer."""
         from obspy import Stream, Trace, Inventory
@@ -110,7 +121,7 @@ class ASDFWriter:
     
     def write(self):
         """Write buffer content in parallel, making sure one process writes at a time."""
-        from mpi4py.MPI import COMM_WORLD as comm
+        comm = self._get_comm()
 
         myrank = comm.Get_rank()
         nranks = comm.Get_size()
