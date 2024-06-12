@@ -146,7 +146,7 @@ class ASDFWriter:
                 
                 except Exception as e:
                     manager = e
-                    sleep(0.1)
+                    sleep(10)
                 
                 else:
                     break
